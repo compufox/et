@@ -1,0 +1,7 @@
+/ui/*.lisp
+*.a
+/tmp/
+/.qmake.stash
+/et
+/ui/*.lisp
+/tr.h
