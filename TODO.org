@@ -1,0 +1,45 @@
+* UI
+** Fix statuses overlapping when expanding CW
+   maybe its the size policy? 
+
+** Add menu options for adding/switching accounts
+
+** Add options to redisplay docks that are closed
+
+** Add preference window
+
+** Add generic error window
+
+** Design notification widget
+
+** Desktop alerts on notifications
+   saw something about QSysTrayIcon stuff being able to display messages?
+
+** UI to add media to status
+
+** UI to have media in a status
+
+** Create dropdown menu for more button
+
+** Add bookmark button
+
+** Emoji?
+
+** Custom Emoji??!!??!?
+
+** Fix visibility combobox clipping text
+
+** Thread view
+
+** Account view
+
+* Backend
+** Catch tooter errors, display error
+
+** Fetch ~20-40 statuses to fill timelines on start up
+
+** Fix delete handler
+   this is complicated? need to figure out how to retrieve status id from QListWidgetItem
+
+** Save default visibility
+   look into mastodon docs to get preferences
