@@ -1,0 +1,48 @@
+* Extratootrestrial
+
+** Building
+*** Prepare
+
+ - make sure you have Qt5 installed (including QWebEngine)
+ - install eql5
+
+
+*** Build (using ASDF with dependencies)
+
+    remove "tmp/" (if present)
+
+#+BEGIN_SRC
+$ eql5 make
+$ qmake
+$ make           (MSVC: nmake)
+#+END_SRC
+
+    Now you should find a "et" executable, containing everything in one exe.
+
+    Please note files:
+
+    - =et.asd=            ; define system
+    - =package.lisp=      ; system package
+    - =dependencies.lisp= ; for Quicklisp (used in "run" and "make")
+    - =run.lisp=          ; load system (compiled)
+
+** Notes
+
+*** Windows
+
+    Please note function
+
+    =eql.ignoreIOStreams();=
+
+    in main.cpp, as printing to =*standard-output*= would crash your GUI
+    application.
+
+
+** Deploy
+
+   You may want to strip your exe before deploying:
+
+#+BEGIN_SRC
+$ strip et
+#+END_SRC
+
