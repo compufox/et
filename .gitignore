@@ -5,3 +5,4 @@
 /et
 /ui/*.lisp
 /tr.h
+Makefile
