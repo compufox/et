@@ -8,87 +8,121 @@
 ;;  - needs to properly handle boosts
 ;;     (currently just acts like the person boosting
 ;;     is the one who posted it)
-;;  - properly setup status button signals
-;;  - try and implement cloning of sorts.
-;;     currently experiences errors re: cws and
-;;     i think thats tied to not cloning the status
 ;;  - handle media uploads
 (defun generate-status-widget (from)
   (ui-status:ini)
-  (qset ui-status:*status* "objectName" (tooter:id from))
-  (qset ui-status:*lbl-content* "text"
-        (from-utf8 (tooter:content from)))
+  (let* ((status ui-status:*status*)
+         (lbl-content (qfind-child status "lbl_content"))
+         (btn-fave (qfind-child status "btn_fave"))
+         (btn-boost (qfind-child status "btn_boost"))
+         (btn-reply (qfind-child status "btn_reply"))
+         (lbl-boost-icon (qfind-child status "lbl_boost_icon"))
+         (lbl-boosted-by (qfind-child status "lbl_boosted_by"))
+         (btn-cw (qfind-child status "btn_cw"))
+         (lbl-cw (qfind-child status "lbl_cw"))
+         (lyt-cw (qfind-child status "lyt_cw"))
+         (lbl-avatar (qfind-child status "lbl_avatar"))
+         (lbl-account (qfind-child status "lbl_account"))
+         (lbl-privacy (qfind-child status "lbl_privacy")))
+    (qset status "objectName" (x:cc "status_" (tooter:id from)))
+    (qset lbl-content "text"
+          (from-utf8 (tooter:content from)))
 
-  (qlet ((boost "QPixmap(QString)" "resources/icons/refresh.png")
-         (star "QPixmap(QString)" "resources/icons/star.png")
-         (reply "QPixmap(QString)" "resources/icons/reply.png")
-         (icon-boost "QIcon")
-         (icon-star "QIcon")
-         (icon-reply "QIcon"))
-    (qfun icon-boost "addPixmap"
-          (qfun boost "scaled" 16 16 1))
-    (qfun icon-reply "addPixmap"
-          (qfun reply "scaled" 16 16 1))
-    (qfun icon-star "addPixmap"
-          (qfun star "scaled" 16 16 1))
-
-    (qset ui-status:*lbl-boost-icon* "pixmap" (qfun boost "scaled" 24 24 1))
-
-    (qfun ui-status:*btn-reply* "setIcon" icon-reply)
-    (qfun ui-status:*btn-boost* "setIcon" icon-boost)
-    (qfun ui-status:*btn-fave* "setIcon" icon-star))
+    (qlet ((boost "QPixmap(QString)" (if (tooter:reblogged from)
+                                         "resources/icons/refresh-blue.png"
+                                         "resources/icons/refresh.png"))
+           (star "QPixmap(QString)" (if (tooter:favourited from)
+                                        "resources/icons/star-filled.png"
+                                        "resources/icons/star.png"))
+           (reply "QPixmap(QString)" "resources/icons/reply.png")
+           (icon-boost "QIcon(QPixmap)" (qfun boost "scaled" 16 16 1))
+           (icon-star "QIcon(QPixmap)" (qfun star "scaled" 16 16 1))
+           (icon-reply "QIcon(QPixmap)" (qfun reply "scaled" 16 16 1)))
+      
+      (qfun btn-reply "setIcon" icon-reply)
+      (qfun btn-boost "setIcon" icon-boost)
+      (qfun btn-fave "setIcon" icon-star))
   
-  (let ((account (tooter:account from)))
-    (qset ui-status:*lbl-account* "text" (format nil "<p><strong>~A</strong> @~A"
-                                                 (from-utf8 (tooter:display-name account))
-                                                 (from-utf8 (tooter:account-name account))))
+    (let* ((parent (tooter:parent from))
+           (account (if parent
+                        (tooter:account (tooter:parent from))
+                        (tooter:account from))))
+      (qset lbl-account "text"
+            (format nil "<p><strong>~A</strong> @~A"
+                    (from-utf8 (tooter:display-name account))
+                    (from-utf8 (tooter:account-name account))))
+      
+      ;; test for reblog and set accordingly
+      (if parent
+          (qlet ((p "QPixmap(QString)" "resources/icons/refresh.png"))
+            (qset lbl-boost-icon "pixmap" (qfun p "scaled" 24 24 1))
+            (qset lbl-boosted-by "text"
+                  (from-utf8 (x:cc "boosted by @"
+                                   (tooter:account-name
+                                    (tooter:account from))))))
+          (progn
+            (qset lbl-boost-icon "visible" nil)
+            (qset lbl-boosted-by "visible" nil)))
+      
+      
+      ;; if there IS a cw then we need to make sure we set
+      ;;  up the proper handlers and show the correct widgets
+      (let ((spoiler-text (if parent
+                              (tooter:spoiler-text parent)
+                              (tooter:spoiler-text from))))
+        (if (string> spoiler-text "")
+            (progn
+              (qset lbl-cw "text" (from-utf8 spoiler-text))
+              (qfun lbl-content "setVisible" nil)
+              (qconnect btn-cw "clicked()"
+                        #'(lambda ()
+                            (qset lbl-content "visible"
+                                  (not (qget lbl-content "visible"))))))
+            (qset lyt-cw "visible" nil)))
+      
+      
+      ;; need to check for cache'd copy of avatar and load it
+      ;;  or fetch it if it doesn't exist
+      ;; TODO: check create-time for FILEPATH and if its older
+      ;;       than like a week re-download it
+      (async 
+       (let ((filepath (account-avatar-path account)))
+         (unless (probe-file filepath)
+           (download (tooter:avatar-static account) filepath))
+
+         (qrun*
+           (qlet ((p "QPixmap(QString)" (namestring filepath)))
+             ;; 1 = |Qt.AspectRatioMode.KeepAspectRatio|
+             (qset lbl-avatar "pixmap" (qfun p "scaled" 60 60 1))))))
+      
+      ;; set the privacy icon
+      (let ((vis (if parent
+                     (tooter:visibility parent)
+                     (tooter:visibility from))))
+        (qlet ((p "QPixmap(QString)" (privacy-icon vis)))
+          (qset lbl-privacy "toolTip" (string-downcase (string vis)))
+          (qset lbl-privacy "pixmap" (qfun p "scaled" 16 16 1)))
+        
+        ;; ensure we cant boost statuses that cannot be boosted
+        ;; TODO: check and see if the post was made by user and
+        ;;       ignore this if so
+        (unless (boostablep from)
+          (qset btn-boost "enabled" nil))))
     
-    ;; test for reblog and set accordingly
-    (qset ui-status:*lbl-boosted-by* "text" (from-utf8 (x:cc "@" (tooter:account-name account)))))
-
-  ;; if there IS a cw then we need to make sure we set
-  ;;  up the proper handlers and show the correct widgets
-  (if (string> (tooter:spoiler-text from) "")
-      (progn
-        (qset ui-status:*lbl-cw* "text" (from-utf8 (tooter:spoiler-text from)))
-        (qfun ui-status:*lbl-content* "setVisible" nil)
-        (qconnect ui-status:*btn-cw* "clicked()" #'(lambda ()
-                                                     (qset ui-status:*lbl-content* "visible"
-                                                           (not (qget ui-status:*lbl-content* "visible"))))))
-      (progn
-        (qfun ui-status:*lbl-cw* "setVisible" nil)
-        (qfun ui-status:*btn-cw* "setVisible" nil)))
+    ;; set button signals here
+    (qconnect ui-status:*btn-reply* "clicked()"
+              #'(lambda ()
+                  (prepare-reply from)))
+    (qconnect ui-status:*btn-fave* "clicked()"
+              #'(lambda ()
+                  (favourite-status from status)))
+    (qconnect ui-status:*btn-boost* "clicked()"
+              #'(lambda ()
+                  (reblog-status from status)))
     
-  
-  ;; need to check for cache'd copy of avatar and load it
-  ;;  or fetch it if it doesn't exist
-  (let* ((account (tooter:account from))
-         (filepath (account-avatar-path account)))
-    (unless (probe-file filepath)
-      (download-avatar (tooter:avatar-static account) filepath))
-
-    (qlet ((p "QPixmap(QString)" (namestring filepath)))
-      (qset ui-status:*lbl-avatar* "pixmap" (qfun p "scaled" 60 60 1)))) ;; 1 = |Qt.AspectRatioMode.KeepAspectRatio|
-
-  (let ((vis (tooter:visibility from)))
-    (qlet ((p "QPixmap(QString)" (x:cc "resources/icons/" (case vis
-                                                            (:public "globe.png")
-                                                            (:unlisted "lock-open.png")
-                                                            (:private "lock-closed.png")
-                                                            (:direct "mail.png")))))
-      (qset ui-status:*lbl-privacy* "toolTip" (string-downcase (string vis)))
-      (qset ui-status:*lbl-privacy* "pixmap" (qfun p "scaled" 24 24 1)))
-
-    (when (or (eql vis :private) (eql vis :direct))
-      (qset ui-status:*btn-boost* "enabled" nil)))
-
-  (qconnect ui-status:*btn-reply* "clicked()" #'(lambda () (prepare-reply from)))
-  (qconnect ui-status:*btn-fave* "clicked()" #'(lambda () )) ;;favorite toot, show UI thing to show user
-  (qconnect ui-status:*btn-boost* "clicked()" #'(lambda () )) ;;boost toot, show UI thing to show user
-
-  ;; connect btn-more actions here
-
-  ;; return the status widget
-  ui-status:*status*)
+    ;; connect btn-more actions here
+    
+    ;; return the status widget
+    status))
 
 

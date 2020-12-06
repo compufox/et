@@ -1,3 +1,4 @@
 (qrequire :webengine)
-(ql:quickload '(:tooter :yason :websocket-driver-client :with-user-abort))
+(ql:quickload '(:tooter :yason :websocket-driver-client
+                :bordeaux-threads))
 

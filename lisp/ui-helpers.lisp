@@ -76,20 +76,23 @@
   (let ((acct (tooter:account to)))
     (setf *reply-id* (tooter:id to))
     (qset *lbl-reply-acct* "text" (tooter:username acct))
-    (qlet ((p "QPixmap(QString)" (account-avatar-path acct)))
-      (qfun p "scaled" 64 64)
-      (qset *lbl-reply-avatar* "pixmap" p))
+    (qlet ((p "QPixmap(QString)" (namestring (account-avatar-path acct))))
+      (qset *lbl-reply-avatar* "pixmap" (qfun p "scaled" 30 30 1)))
     (qset *lbl-reply-content* "text" (tooter:content to))
+    (qset *txt-compose-content* "plainText" (x:cc "@" (tooter:account-name acct)))
 
     ;; maybe set this under a preference option?
-    (qset *edt-compose-cw* "text" (tooter:spoiler-text to))
+    (when (tooter:spoiler-text to)
+      (qset *chk-compose-cw* "enabled" t)
+      (qset *edt-compose-cw* "visible" t)
+      (qset *edt-compose-cw* "text" (tooter:spoiler-text to)))
     
-    (|show| *lyt-reply*)))
+    (qfun *lyt-reply* "show")))
 
 (defun clear-reply ()
   "clears the reply ID and hides the reply layout"
   (setf *reply-id* nil)
-  (|setVisible| *lyt-reply* nil))
+  (qset *lyt-reply* "visible" nil))
 
 (defun send-post ()
   ;; disable our post button until we send the status
@@ -98,28 +101,28 @@
         (visibility (to-keyword (qget *cmb-compose-privacy* "currentText")))
         (hide-media (qget *chk-compose-hide* "checked"))
         (cw (qget *edt-compose-cw* "text")))
-
-    ;; need to catch for errors here
-    (tooter:make-status *tooter-client*
-                        content
-                        :visibility visibility
-                        :sensitive hide-media
-                        :spoiler-text (when (qget *chk-compose-cw* "checked") cw)
-                        :in-reply-to *reply-id*)
-
-    ;; set stuff back to defaults
-    (qset *txt-compose-content* "plainText" "")
-    (qset *edt-compose-cw* "text" "")
-    (qset *chk-compose-cw* "checked" nil)
-    (qset *chk-compose-hide* "checked" nil)
-    (qset *btn-compose-post* "enabled" t)
-
-    ;; TODO
-    ;; this should take into account current account
-    ;; default
-    (qset *cmb-compose-privacy* "currentIndex" 0)
-    
-    (clear-reply)))
+    (async 
+      ;; need to catch for errors here
+      (tooter:make-status *tooter-client*
+                          content
+                          :visibility visibility
+                          :sensitive hide-media
+                          :spoiler-text (when (qget *chk-compose-cw* "checked") cw)
+                          :in-reply-to *reply-id*)
+      
+      ;; set stuff back to defaults
+      (qrun*
+        (qset *txt-compose-content* "plainText" "")
+        (qset *edt-compose-cw* "text" "")
+        (qset *chk-compose-cw* "checked" nil)
+        (qset *chk-compose-hide* "checked" nil)
+        (qset *btn-compose-post* "enabled" t)
+        
+        ;; TODO
+        ;; this should take into account current account
+        ;; defautl
+        (qset *cmb-compose-privacy* "currentIndex" 0)
+        (clear-reply)))))
 
 (defun add-new-account (&key should-quit set-default-account)
   (qrequire :webengine)
@@ -147,16 +150,26 @@
     id))
 
 (defun update-handler (post timeline)
-    (let ((status (generate-status-widget post))
-          (item (qnew "QListWidgetItem"))
-          (tl (cond
-                ((string= timeline "home") *tl-home*)
-                ((string= timeline "local") *tl-local*)
-                ((string= timeline "fedi") *tl-fedi*))))
+  (let ((status (generate-status-widget post))
+        (item (qnew "QListWidgetItem"))
+        (tl (cond
+              ((string= timeline "home") *tl-home*)
+              ((string= timeline "local") *tl-local*)
+              ((string= timeline "fedi") *tl-fedi*)))
+        (status-name (x:cc "status_"
+                           (princ-to-string (tooter:id post)))))
+    (flet ((set-size ()
+             (list (qfun tl "frameWidth")
+                   (cadr (qfun status "sizeHint")))))
       (qfun status "show")
-      (qfun item "setSizeHint" (qfun status "sizeHint"))
+      (qfun item "setSizeHint" (set-size))
+      ;(qoverride item "data(int)"
+      ;           #'(lambda (_)
+      ;               (declare (ignore _))
+      ;               (qvariant-from-value status-name "QString")))
+      (qconnect (qfind-child status "btn_cw") "clicked()" #'set-size)
       (qfun tl "insertItem" 0 item)
-      (qfun tl "setItemWidget" item status)))
+      (qfun tl "setItemWidget" item status))))
 
 (defun delete-handler (id timeline)
   (let* ((tl (cond
@@ -170,10 +183,12 @@
     (loop for i upto count
           for item = (qfun tl "item" i)
 
-          when (qfind-child item id) do
-            (qfun tl "removeItemWidget" item))))
+          when (equal (qvariant-value (qfun item "data" 0))
+                      (x:cc "status_" (princ-to-string id)))
+            do (qfun tl "removeItemWidget" item))))
 
 (defun notification-handler (post)
+  (declare (ignore post))
   #|
     (let ((status (generate-status-widget post))
           (item (qnew "QListWidgetItem")))
@@ -183,3 +198,41 @@
       (qfun item "show")))
   |#
   )
+
+(defun favourite-status (status widget)
+  (let* ((faved (tooter:favourited status))
+         (icon-path (if faved
+                        "resources/icons/star.png"
+                        "resources/icons/star-filled.png"))
+         (btn (qfind-child widget "btn_fave")))
+
+    (async 
+     ;; toggle favourite property of status
+     (if faved
+         (tooter:unfavourite *tooter-client* status)
+         (tooter:favourite *tooter-client* status))
+     
+     ;; update the button icon
+     (qrun* 
+       (qlet ((p "QPixmap(QString)" icon-path)
+              (i "QIcon(QPixmap)" (qfun p "scaled" 16 16 1)))
+         (qset btn "icon" i))))))
+
+(defun reblog-status (status widget)
+  (let* ((boosted (tooter:reblogged status))
+         (icon-path (if boosted
+                        "resources/icons/refresh.png"
+                        "resources/icons/refresh-blue.png"))
+         (btn (qfind-child widget "btn_boost")))
+
+    (async
+     ;; toggle favourite property of status
+     (if boosted
+         (tooter:unreblog *tooter-client* status)
+         (tooter:reblog *tooter-client* status))
+     
+     ;; update the button icon
+     (qrun* 
+       (qlet ((p "QPixmap(QString)" icon-path)
+              (i "QIcon(QPixmap)" (qfun p "scaled" 16 16 1)))
+         (qset btn "icon" i))))))

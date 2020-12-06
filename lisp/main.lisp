@@ -56,7 +56,4 @@
 
       (t nil))))
 
-(handler-case 
-    (with-user-abort 
-        (start))
-  (user-abort ()))
+(start)

@@ -1,7 +1,7 @@
 (in-package :cl-user)
 
 (defpackage :et
-  (:use :cl :eql :with-user-abort :ui-main)
+  (:use :cl :eql :ui-main)
   (:export
    #:start))
 

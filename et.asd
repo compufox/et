@@ -1,6 +1,7 @@
 (defsystem :et
   :serial t
-  :depends-on (:tooter :yason :websocket-driver-client :with-user-abort)
+  :depends-on (:tooter :yason :websocket-driver-client
+               :bordeaux-threads)
   :components ((:module "ui" :serial t
                 :components ((:file "main")
                              (:file "wizard")

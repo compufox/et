@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   fill="none"
+   viewBox="0 0 24 24"
+   stroke="currentColor"
+   version="1.1"
+   id="svg74"
+   sodipodi:docname="star-filled.svg"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   inkscape:export-filename="/home/fox/code/et/resources/icons/star-filled.png"
+   inkscape:export-xdpi="256"
+   inkscape:export-ydpi="256">
+  <metadata
+     id="metadata80">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs78" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1148"
+     inkscape:window-height="834"
+     id="namedview76"
+     showgrid="false"
+     inkscape:zoom="26.625"
+     inkscape:cx="10.516432"
+     inkscape:cy="12"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg74" />
+  <path
+     stroke-linecap="round"
+     stroke-linejoin="round"
+     stroke-width="2.09322"
+     d="m 11.151254,2.0038688 c 0.295579,-1.02349173 1.585283,-1.02349173 1.892111,0 l 1.483006,5.1941372 a 0.98569778,1.1112831 0 0 0 0.920487,0.7667853 h 4.858123 c 0.971624,0 1.329591,1.3779912 0.562519,2.0114225 l -3.937636,3.2093852 a 0.98569778,1.1112831 0 0 0 -0.357456,1.242415 l 1.483006,5.194137 c 0.295578,1.024603 -0.767072,1.875846 -1.534144,1.242415 L 12.583634,17.65518 a 0.98569778,1.1112831 0 0 0 -1.176178,0 L 7.4698201,20.864566 C 6.702748,21.497997 5.6799854,20.645643 5.935676,19.622151 L 7.4186819,14.428014 A 0.98569778,1.1112831 0 0 0 7.0612264,13.185599 L 3.12359,9.9762138 C 2.356518,9.3427825 2.7487475,7.9647913 3.6861095,7.9647913 H 8.5442323 A 0.98569778,1.1112831 0 0 0 9.4647187,7.198006 Z"
+     id="path72"
+     style="fill:#ffd40b;fill-opacity:1" />
+</svg>

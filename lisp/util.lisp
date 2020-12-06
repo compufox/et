@@ -1,7 +1,7 @@
 (in-package :et)
 
 (declaim (inline to-keyword streaming-url ensure-https
-                 determine-extension from-utf8))
+                 determine-extension from-utf8 privacy-icon))
 
 (defun qsetting-value (key &optional default)
   "retrieve a value from qsettings"
@@ -17,6 +17,12 @@
 (defun to-keyword (val)
   "converts VAL to a keyword"
   (intern (string-upcase val) :keyword))
+
+(defmacro async (&body body)
+  "runs BODY in a different thread"
+  `(bt:make-thread
+    (lambda ()
+      ,@body)))
 
 (defun standard-paths (type)
   "returns Qt standard path given keyword TYPE"
@@ -43,7 +49,8 @@
           (:app-local-data-location |QStandardPaths.AppLocalDataLocation|)
           (:app-config-location |QStandardPaths.AppConfigLocation|))))
 
-(defun download-avatar (url path)
+(defun download (url path)
+  "downloads file at URL and saves to PATH "
   (with-open-file (out path :direction :output
                             :if-does-not-exist :create
                             :if-exists :overwrite
@@ -59,10 +66,12 @@
            500))
 
 (defun determine-extension (path)
+  "gets the file extension for PATH"
   (let ((num (search "." path :test #'string= :from-end t)))
     (subseq path num)))
 
 (defun account-avatar-path (account)
+  "returns the pathstring to ACCOUNT's cached avatar"
   (let ((filename (x:cc (tooter:id account) (determine-extension (tooter:avatar-static account))))
         (path (x:cc (subseq (tooter:base *tooter-client*) 8) "/accounts/"))
         (cache (car (standard-paths :cache-location))))
@@ -72,9 +81,11 @@
                                        (ensure-directories-exist cache))))))
 
 (defun streaming-url ()
+  "return the streaming url for the current instance"
   (gethash "streaming_api" (tooter:urls (tooter:instance *tooter-client*))))
 
 (defun ensure-https (url)
+  "ensures that URL starts with https://"
   (if (search "https://" url :test #'string=)
       url
       (x:cc "https://" url)))
@@ -113,6 +124,7 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
     (format t "disconnected because ~A (code=~A)~%" reason code)))
 
 (defun validate-instance-url ()
+  "validates the instance url entered into the new account wizard"
   (let ((url (ensure-https (qget ui-wizard:*wiz-serv-entry* "text")))
         (qurl (qnew "QUrl")))
     
@@ -136,6 +148,7 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
     t))
 
 (defun validate-access-token ()
+  "validates the access token entered in the new account wizard"
   (handler-case
       (progn
         (tooter:authorize *tooter-client*
@@ -146,4 +159,30 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
   t)
 
 (defun from-utf8 (string)
+  "run STIRNG through QString.fromUTF8"
   (qfrom-utf8 (map 'vector #'char-code string)))
+
+(defun privacy-icon (visibility)
+  ""
+  (x:cc "resources/icons/"
+        (case visibility
+          (:public "globe.png")
+          (:unlisted "lock-open.png")
+          (:private "lock-closed.png")
+          (:direct "mail.png"))))
+
+(defun boostablep (status)
+  "checks to see if STATUS is boostable by the current account"
+  (let ((vis (tooter:visibility status))
+        (boostable t))
+    (unless (self-post-p status)
+      (when (or (eql vis :private) (eql vis :direct))
+        (setf boostable nil)))
+    boostable))
+
+(defun self-post-p (status)
+  "checks to see if STATUS was made by the current account"
+  (let ((user-account (tooter:id (tooter:account *tooter-client*)))
+        (status-account (tooter:id (or (tooter:parent status)
+                                       (tooter:account status)))))
+    (equal user-account status-account)))
