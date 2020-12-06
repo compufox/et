@@ -1,6 +1,7 @@
 (in-package :et)
 
-(declaim (inline to-keyword streaming-url ensure-https))
+(declaim (inline to-keyword streaming-url ensure-https
+                 determine-extension from-utf8))
 
 (defun qsetting-value (key &optional default)
   "retrieve a value from qsettings"
@@ -49,7 +50,7 @@
                             :element-type '(unsigned-byte 8))
     (loop with in = (drakma:http-request url :want-stream t)
           for byte = (read-byte in nil nil)
-          until byte do (write-byte byte out))))
+          while byte do (write-byte byte out))))
 
 (defun instance-max-chars (url)
   "gets the max toot character count"
@@ -57,13 +58,18 @@
            (yason:parse (map 'string #'code-char (drakma:http-request (x:cc url "/api/v1/instance"))))
            500))
 
-;; TODO
-;; store under
-;; cache/URL/accounts/ID.png
-;; ensure that URL/accounts/ is created
+(defun determine-extension (path)
+  (let ((num (search "." path :test #'string= :from-end t)))
+    (subseq path num)))
+
 (defun account-avatar-path (account)
-  (merge-pathnames (x:cc "accounts/" (tooter:id account) ".png")
-                   (ensure-directories-exist (car (standard-paths :cache-location)))))
+  (let ((filename (x:cc (tooter:id account) (determine-extension (tooter:avatar-static account))))
+        (path (x:cc (subseq (tooter:base *tooter-client*) 8) "/accounts/"))
+        (cache (car (standard-paths :cache-location))))
+    (merge-pathnames filename
+                     (ensure-directories-exist
+                      (merge-pathnames path
+                                       (ensure-directories-exist cache))))))
 
 (defun streaming-url ()
   (gethash "streaming_api" (tooter:urls (tooter:instance *tooter-client*))))
@@ -80,7 +86,7 @@ FOR is the account ID we're loading configs for
 TIMELINE is one of user, public, public:local, hashtag, hashtag:local, list, direct
 CALLBACK is a function to recieve new websocket updates
 
-if RESTART-ON-CLOSE is non-nil then the websocket will attempt to be restarted if it closes in error
+if RESTART-ON-ERROR is non-nil then the websocket will attempt to be restarted if it closes in error
 TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should contain an appropriate identifier"
   (let ((socket (wsd:make-client (format nil "~A/api/v1/streaming?access_token=~a&stream=~a~A"
                                          (qsetting-value (x:cc "acct_" for "/streaming-url"))
@@ -93,6 +99,10 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
                                              "")))))
     (wsd:on :message socket callback)
     (wsd:on :close socket #'print-close)
+
+    (when restart-on-error
+      ;; create some kind of handler to restart the socket if it's closed
+      )
 
     (wsd:start-connection socket)
     (push socket *websockets*)))
@@ -119,7 +129,8 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
           (multiple-value-bind (authed auth-url) (tooter:authorize *tooter-client*)
             (declare (ignore authed))
             (qfun qurl "setUrl" auth-url)
-            (qfun ui-wizard:*wiz-auth-view* "load" qurl)))
+            (qfun ui-wizard:*wiz-auth-view* "load" qurl)
+            (qdel qurl)))
       (error (e)
         (format t "~A~%" e)))
     t))
@@ -133,3 +144,6 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
     (error (e)
       nil))
   t)
+
+(defun from-utf8 (string)
+  (qfrom-utf8 (map 'vector #'char-code string)))

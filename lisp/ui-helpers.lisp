@@ -9,6 +9,11 @@
 
   (|setVisible| *lyt-reply* nil)
   (|setVisible| *edt-compose-cw* nil)
+
+  ;; placeholders set here because of bug in eql5 -quic
+  (qset *edt-compose-cw* "placeholderText" "Content Warning...")
+  (qset *txt-compose-content* "placeholderText" "Whats up?")
+  
   (unless (restore-application-state)
     (|tabifyDockWidget| *main-window* *dock-notifs* *dock-local*)
     (|tabifyDockWidget| *main-window* *dock-notifs* *dock-fedi*))
@@ -27,11 +32,10 @@
   (qconnect *chk-compose-cw* "toggled(bool)" 'update-char-count)
   (qconnect *btn-compose-post* "clicked()" 'send-post)
   (qconnect *btn-reply-clear* "clicked()" 'clear-reply)
-  (qoverride *main-window* "closeEvent(QCloseEvent*)" 'save-application-state))
+  (qoverride *main-window* "closeEvent(QCloseEvent*)" 'app-close))
 
-(defun save-application-state (_)
+(defun save-application-state ()
   "saves the current application dock state and geometry"
-  (declare (ignore _))
   (let ((state (qvariant-from-value (|saveState| *main-window*) "QByteArray"))
         (geom (qvariant-from-value (|saveGeometry| *main-window*) "QByteArray")))
     (setf (qsetting-value "window/state") state
@@ -109,11 +113,15 @@
     (qset *chk-compose-cw* "checked" nil)
     (qset *chk-compose-hide* "checked" nil)
     (qset *btn-compose-post* "enabled" t)
-    (qset *cmb-compose-privacy* "index" 0)
+
+    ;; TODO
+    ;; this should take into account current account
+    ;; default
+    (qset *cmb-compose-privacy* "currentIndex" 0)
     
     (clear-reply)))
 
-(defun add-new-account (&key quit set-default-account)
+(defun add-new-account (&key should-quit set-default-account)
   (qrequire :webengine)
   (ui-wizard:ini)
 
@@ -121,10 +129,8 @@
   (qoverride ui-wizard:*page-3* "validatePage()" 'validate-access-token)
   
   (when (and (zerop (|exec| ui-wizard:*wiz-new-account*))
-             quit)
+             should-quit)
     (eql:qq))
-  
-  ;;  return value should be new account's id as a string
 
   (let ((id (tooter:id (tooter:account *tooter-client*))))
     (qlet ((token "QVariant(QString)" (tooter:access-token *tooter-client*))
@@ -141,15 +147,16 @@
     id))
 
 (defun update-handler (post timeline)
-  (let ((status (generate-status-widget post))
-        (item (qnew "QListWidgetItem"))
-        (tl (cond
-              ((string= timeline "home") *tl-home*)
-              ((string= timeline "local") *tl-local*)
-              ((string= timeline "fedi") *tl-fedi*))))
-    (qset item "sizeHint" (qget status "sizeHint"))
-    (qfun tl "addItem" item)
-    (qfun tl "setItemWidget" item status)))
+    (let ((status (generate-status-widget post))
+          (item (qnew "QListWidgetItem"))
+          (tl (cond
+                ((string= timeline "home") *tl-home*)
+                ((string= timeline "local") *tl-local*)
+                ((string= timeline "fedi") *tl-fedi*))))
+      (qfun status "show")
+      (qfun item "setSizeHint" (qfun status "sizeHint"))
+      (qfun tl "insertItem" 0 item)
+      (qfun tl "setItemWidget" item status)))
 
 (defun delete-handler (id timeline)
   (let* ((tl (cond
@@ -167,8 +174,12 @@
             (qfun tl "removeItemWidget" item))))
 
 (defun notification-handler (post)
-  (let ((status (generate-status-widget post))
-        (item (qnew "QListWidgetItem")))
-    (qset item "sizeHint" (qget status "sizeHint"))
-    (qfun *tl-notif* "addItem" item)
-    (qfun *tl-notif* "setItemWidget" item status)))
+  #|
+    (let ((status (generate-status-widget post))
+          (item (qnew "QListWidgetItem")))
+      ;(qset item "sizeHint" (qget status "sizeHint"))
+      (qfun *tl-notif* "addItem" item)
+      (qfun *tl-notif* "setItemWidget" item status)
+      (qfun item "show")))
+  |#
+  )
