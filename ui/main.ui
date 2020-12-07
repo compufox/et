@@ -75,7 +75,7 @@
      <x>0</x>
      <y>0</y>
      <width>786</width>
-     <height>30</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="mnu_file">
@@ -94,6 +94,8 @@
     <property name="title">
      <string>Accounts</string>
     </property>
+    <addaction name="act_new_account"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="mnu_view">
     <property name="title">
@@ -460,6 +462,16 @@
    </property>
    <property name="menuRole">
     <enum>QAction::QuitRole</enum>
+   </property>
+  </action>
+  <action name="actionAdd_New_Account">
+   <property name="text">
+    <string>Add New Account</string>
+   </property>
+  </action>
+  <action name="act_new_account">
+   <property name="text">
+    <string>Add New Account</string>
    </property>
   </action>
  </widget>
