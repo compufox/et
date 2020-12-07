@@ -26,8 +26,7 @@
                                   :tooltip "change to account"
                                   :action-group *account-action-group*
                                   :callback #'(lambda ()
-                                                (format t "changed account!")
-                                                (force-output))))
+                                                (change-account-to account))))
   
   ;; by default hide reply layout and CW composer
   ;; TODO: preferences to always show CW composer
@@ -177,6 +176,15 @@
         (setf (qsetting-value "default_account") vid)))
     
     id))
+
+(defun change-account-to (id)
+  ;; clears the timelines
+  (dolist (tl (list *tl-home* *tl-notif* *tl-fedi* *tl-local*))
+    (loop until (zerop (qfun tl "count"))
+          do (qdel (qfun tl "takeItem" 0))))
+
+  (close-sockets)
+  (initialize-client id))
 
 (defun update-handler (post timeline)
   (let ((status (generate-status-widget post))

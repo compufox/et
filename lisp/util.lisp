@@ -21,6 +21,35 @@
     (lambda ()
       ,@body)))
 
+(defun initialize-client (account)
+  (setf *tooter-client* (make-instance 'tooter:client
+                                       :name "extratootrestrial"
+                                       :base (qsetting-value (x:cc "acct_" account "/base-url"))
+                                       :website "https://github.com/compufox/et"
+                                       :access-token (qsetting-value (x:cc "acct_" account "/token")))
+        *visibility-default* (parse-integer
+                              (qsetting-value (x:cc "acct_" account "/visibility-default"))))
+  
+
+  ;; start our websockets for each standard timeline
+  (start-websocket account "user"
+                   #'(lambda (m)
+                       (qrun*
+                         (dispatch m "home" t))))
+  (start-websocket account "public:local"
+                   #'(lambda (m)
+                       (qrun*
+                         (dispatch m "local"))))
+  (start-websocket account "public"
+                   #'(lambda (m)
+                       (qrun* 
+                         (dispatch m "fedi")))))
+
+(defun close-sockets ()
+  (mapcar #'wsd:close-connection *websockets*)
+  (mapcar #'wsd:remove-all-listeners *websockets*)
+  (setf *websockets* nil))
+  
 (defun standard-paths (type)
   "returns Qt standard path given keyword TYPE"
   (qfun "QStandardPaths" "standardLocations"

@@ -8,30 +8,12 @@
 
   (let ((account (or (qsetting-value "default_account")
                      (add-new-account :should-quit t :set-default-account t))))
-    (setf *tooter-client* (make-instance 'tooter:client
-                                         :name "extratootrestrial"
-                                         :base (qsetting-value (x:cc "acct_" account "/base-url"))
-                                         :website "https://github.com/compufox/et"
-                                         :access-token (qsetting-value (x:cc "acct_" account "/token")))
-          *visibility-default* (parse-integer
-                                (qsetting-value (x:cc "acct_" account "/visibility-default"))))
+    
+    ;; initialize backend
+    (initialize-client account)
     
     ;; initialize main window widgets
-    (initialize-ui)
-
-    ;; start our websockets for each standard timeline
-    (start-websocket account "user"
-                     #'(lambda (m)
-                         (qrun*
-                           (dispatch m "home" t))))
-    (start-websocket account "public:local"
-                     #'(lambda (m)
-                         (qrun*
-                           (dispatch m "local"))))
-    (start-websocket account "public"
-                     #'(lambda (m)
-                         (qrun* 
-                           (dispatch m "fedi")))))
+    (initialize-ui))
     
   ;; show our main application widget
   (show))
@@ -41,7 +23,7 @@
   (declare (ignore _))
   (save-application-state)
   (qdel *account-action-group*)
-  (mapcar #'wsd:close-connection *websockets*))
+  (close-sockets))
 
 (defun dispatch (message timeline &optional handle-notifications)
   (let* ((parsed (yason:parse message))
