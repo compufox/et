@@ -8,19 +8,27 @@
   (connect-signals)
 
   ;; generate accounts dropdown menu and action group
-  (setf *account-action-group* (generate-action-group *main-window* :exclusive t))
-  (loop :with default := (qsetting-value "defaul_account")
-        :for account :in (qsetting-value "available-accounts")
-        :do (qfun *mnu-account* "addAction"
-                  (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
-                                        *main-window*
-                                        :checkable t
-                                        :checked (equal account default)
-                                        :tooltip "change to account"
-                                        :action-group *account-action-group*
-                                        :callback #'(lambda ()
-                                                      (format t "changed account!")))))
-
+  (setf *account-action-group*
+        (generate-action-group *main-window*
+                               :exclusive t
+                               :visible t))
+  (loop :with default := (qsetting-value "default_account")
+        :with accounts := (qsetting-value "available-accounts")
+        
+        :for account :in (typecase accounts
+                           (list accounts)
+                           (string (list accounts)))
+        :do (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
+                                  *mnu-account*
+                                  :checkable t
+                                  :checked (equal account default)
+                                  :visible t
+                                  :tooltip "change to account"
+                                  :action-group *account-action-group*
+                                  :callback #'(lambda ()
+                                                (format t "changed account!")
+                                                (force-output))))
+  
   ;; by default hide reply layout and CW composer
   ;; TODO: preferences to always show CW composer
   (qset *lyt-reply* "visible" nil)
@@ -42,8 +50,8 @@
 
 (defun connect-signals ()
   "connect signals and install overrides"
-  (qconnect *actionquit* "triggered()" *main-window* "close()")
-  (qconnect *act-add-account* "triggered()" 'add-new-account)
+  (qconnect *act-quit* "triggered()" *main-window* "close()")
+  (qconnect *act-new-account* "triggered()" 'add-new-account)
   (qconnect *txt-compose-content* "textChanged()" 'update-char-count)
   (qconnect *edt-compose-cw* "textChanged(QString)" 'update-char-count)
   (qconnect *chk-compose-cw* "toggled(bool)" *edt-compose-cw* "setVisible(bool)")

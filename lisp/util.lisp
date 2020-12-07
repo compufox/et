@@ -136,7 +136,7 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
                                                :website "https://github.com/compufox/et"))
           (multiple-value-bind (authed auth-url) (tooter:authorize *tooter-client*)
             (declare (ignore authed))
-            (qset ui-wizard:*lbl-auth-url* auth-url)))
+            (qset ui-wizard:*lbl-auth-link* auth-url)))
       (error (e)
         (format t "~A~%" e)))
     t))

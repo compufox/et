@@ -40,6 +40,7 @@
   "handle the close event"
   (declare (ignore _))
   (save-application-state)
+  (qdel *account-action-group*)
   (mapcar #'wsd:close-connection *websockets*))
 
 (defun dispatch (message timeline &optional handle-notifications)

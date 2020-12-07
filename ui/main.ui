@@ -75,7 +75,7 @@
      <x>0</x>
      <y>0</y>
      <width>786</width>
-     <height>21</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="mnu_file">
@@ -83,7 +83,7 @@
      <string>File</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
+    <addaction name="act_quit"/>
    </widget>
    <widget class="QMenu" name="mnu_edit">
     <property name="title">
@@ -450,7 +450,7 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionQuit">
+  <action name="act_quit">
    <property name="text">
     <string>Quit</string>
    </property>
@@ -464,11 +464,6 @@
     <enum>QAction::QuitRole</enum>
    </property>
   </action>
-  <action name="actionAdd_New_Account">
-   <property name="text">
-    <string>Add New Account</string>
-   </property>
-  </action>
   <action name="act_new_account">
    <property name="text">
     <string>Add New Account</string>
@@ -478,7 +473,7 @@
  <resources/>
  <connections>
   <connection>
-   <sender>actionQuit</sender>
+   <sender>act_quit</sender>
    <signal>triggered()</signal>
    <receiver>main_window</receiver>
    <slot>close()</slot>

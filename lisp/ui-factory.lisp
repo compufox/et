@@ -123,17 +123,17 @@
     ;; return the status widget
     status))
 
-(defun generate-action-group (parent &key exclusive)
-  (qlet ((group "QActionGroup(QObject*)" parent))
-    (qset group "exclusive" exclusive)
+(defun generate-action-group (parent &key exclusive visible)
+  (let ((group (qnew "QActionGroup(QObject*)" parent)))
+    (when exclusive (qset group "exclusionPolicy" 1)) ;; QActionGroup.ExclusionPolicy.Exclusive
+    (qset group "visible" visible)
     group))
 
-(defun generate-menu-action (text parent &key checkable checked action-group tooltip icon icon-size shortcut callback)
-  (qlet ((action "QAction(QString, QObject*)" text parent))
+(defun generate-menu-action (text parent &key checkable checked action-group tooltip icon icon-size shortcut callback visible)
+  (let ((action (qfun parent "addAction" text)))
     (qset action "checkable" checkable)
     (qset action "checked" checked)
-    (when action-group
-      (qfun action-group "addAction" action))
+    (qset action "visible" visible)
     (qset action "toolTip" (or tooltip ""))
     (when icon
       (qlet ((p "QPixmap(QString)" icon)
@@ -144,4 +144,6 @@
              (s "QShortcut(QKeySequence)" ks))
         (qset action "shortcut" s)))
     (when callback
-      (qconnect action "activated()" callback))))
+      (qconnect action "triggered()" callback))
+    (when action-group
+      (qfun action-group "addAction" action))))
