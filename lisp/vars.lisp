@@ -5,3 +5,4 @@
 (defvar *tooter-client* nil)
 (defvar *websockets* nil)
 (defvar *visibility-default* 0)
+(defvar *account-action-group* nil)

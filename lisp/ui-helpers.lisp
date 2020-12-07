@@ -7,6 +7,22 @@
   (ini)
   (connect-signals)
 
+  ;; generate accounts dropdown menu and action group
+  (setf *account-action-group* (generate-action-group *main-window* :exclusive t))
+  (loop :with default := (qsetting-value "defaul_account")
+        :for account :in (qsetting-value "available-accounts")
+        :do (qfun *mnu-account* "addAction"
+                  (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
+                                        *main-window*
+                                        :checkable t
+                                        :checked (equal account default)
+                                        :tooltip "change to account"
+                                        :action-group *account-action-group*
+                                        :callback #'(lambda ()
+                                                      (format t "changed account!")))))
+
+  ;; by default hide reply layout and CW composer
+  ;; TODO: preferences to always show CW composer
   (qset *lyt-reply* "visible" nil)
   (qset *edt-compose-cw* "visible" nil)
 
@@ -27,6 +43,7 @@
 (defun connect-signals ()
   "connect signals and install overrides"
   (qconnect *actionquit* "triggered()" *main-window* "close()")
+  (qconnect *act-add-account* "triggered()" 'add-new-account)
   (qconnect *txt-compose-content* "textChanged()" 'update-char-count)
   (qconnect *edt-compose-cw* "textChanged(QString)" 'update-char-count)
   (qconnect *chk-compose-cw* "toggled(bool)" *edt-compose-cw* "setVisible(bool)")
@@ -136,12 +153,17 @@
            (streaming-url "QVariant(QString)" (streaming-url))
            (vid "QVariant(QString)" id)
            (base-url "QVariant(QString)" (tooter:base *tooter-client*))
+           (acct-name "QVariant(QString)" (x:cc "@" (tooter:account-name (tooter:account *tooter-client*))))
            (default-visibility "QVariant(int)" (visibility-to-int
-                                                (account-preference :posting-visibility))))
+                                                (account-preference :posting-visibility)))
+           (acct-list "QVariant(QStringList)" (append (qsetting-value "avaliable-accounts")
+                                                      (list id))))
       (setf (qsetting-value (x:cc "acct_" id "/token")) token
             (qsetting-value (x:cc "acct_" id "/streaming-url")) streaming-url
+            (qsetting-value (x:cc "acct_" id "/name")) acct-name
             (qsetting-value (x:cc "acct_" id "/base-url")) base-url
-            (qsetting-value (x:cc "acct_" id "/visibility-default")) default-visibility)
+            (qsetting-value (x:cc "acct_" id "/visibility-default")) default-visibility
+            (qsetting-value "avaliable-accounts") acct-list)
 
       (when set-default-account
         (setf (qsetting-value "default_account") vid)))

@@ -104,8 +104,6 @@
           (qset lbl-privacy "pixmap" (qfun p "scaled" 16 16 1)))
         
         ;; ensure we cant boost statuses that cannot be boosted
-        ;; TODO: check and see if the post was made by user and
-        ;;       ignore this if so
         (unless (boostablep from)
           (qset btn-boost "enabled" nil))))
     
@@ -125,4 +123,25 @@
     ;; return the status widget
     status))
 
+(defun generate-action-group (parent &key exclusive)
+  (qlet ((group "QActionGroup(QObject*)" parent))
+    (qset group "exclusive" exclusive)
+    group))
 
+(defun generate-menu-action (text parent &key checkable checked action-group tooltip icon icon-size shortcut callback)
+  (qlet ((action "QAction(QString, QObject*)" text parent))
+    (qset action "checkable" checkable)
+    (qset action "checked" checked)
+    (when action-group
+      (qfun action-group "addAction" action))
+    (qset action "toolTip" (or tooltip ""))
+    (when icon
+      (qlet ((p "QPixmap(QString)" icon)
+             (i "QIcon(QPixmap)" (qfun p "scaled" icon-size icon-size 1)))
+        (qset action "icon" i)))
+    (when shortcut
+      (qlet ((ks "QKeySequence(QString)" shortcut)
+             (s "QShortcut(QKeySequence)" ks))
+        (qset action "shortcut" s)))
+    (when callback
+      (qconnect action "activated()" callback))))
