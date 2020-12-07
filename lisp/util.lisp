@@ -1,7 +1,8 @@
 (in-package :et)
 
-(declaim (inline to-keyword streaming-url ensure-https
-                 determine-extension from-utf8 privacy-icon))
+(declaim (inline streaming-url ensure-https parse-response
+                 determine-extension from-utf8 privacy-icon
+                 visibility-to-int))
 
 (defun qsetting-value (key &optional default)
   "retrieve a value from qsettings"
@@ -13,10 +14,6 @@
   "defines a setf handler for setting-value"
   (qlet ((settings "QSettings"))
     (|setValue| settings key value)))
-
-(defun to-keyword (val)
-  "converts VAL to a keyword"
-  (intern (string-upcase val) :keyword))
 
 (defmacro async (&body body)
   "runs BODY in a different thread"
@@ -186,3 +183,23 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
         (status-account (tooter:id (or (tooter:parent status)
                                        (tooter:account status)))))
     (equal user-account status-account)))
+
+(defun parse-response (resp)
+  (yason:parse (map 'string #'code-char resp)))
+
+(defun account-preference (pref)
+  (let* ((key (case pref
+                (:posting-visibility "posting:default:visibility")
+                (:posting-sensitive "posting:default:sensitive")
+                (:posting-language "posting:default:language")
+                (:expand-media "reading:expand:media")
+                (:expand-spoilers "reading:expand:spoilers")))
+         (headers (list (cons "Authorization"
+                              (x:cc "Bearer " (tooter:access-token *tooter-client*)))))
+         (response (drakma:http-request (format nil "~a/api/v1/preferences"
+                                                (tooter:base *tooter-client*))
+                                        :additional-headers headers)))
+    (to-keyword (gethash key (parse-response response)))))
+
+(defun visibility-to-int (visibility)
+  (search (list visibility) '(:public :unlisted :private :direct)))

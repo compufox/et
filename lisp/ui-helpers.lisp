@@ -20,6 +20,8 @@
   
   (|raise| *dock-notifs*)
 
+  
+  (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
   (setf *max-post-char* (instance-max-chars (tooter:base *tooter-client*)))
   (set-char-count *max-post-char*))
 
@@ -117,11 +119,7 @@
         (qset *chk-compose-cw* "checked" nil)
         (qset *chk-compose-hide* "checked" nil)
         (qset *btn-compose-post* "enabled" t)
-        
-        ;; TODO
-        ;; this should take into account current account
-        ;; defautl
-        (qset *cmb-compose-privacy* "currentIndex" 0)
+        (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
         (clear-reply)))))
 
 (defun add-new-account (&key should-quit set-default-account)
@@ -139,10 +137,13 @@
     (qlet ((token "QVariant(QString)" (tooter:access-token *tooter-client*))
            (streaming-url "QVariant(QString)" (streaming-url))
            (vid "QVariant(QString)" id)
-           (base-url "QVariant(QString)" (tooter:base *tooter-client*)))
+           (base-url "QVariant(QString)" (tooter:base *tooter-client*))
+           (default-visibility "QVariant(int)" (visibility-to-int
+                                                (account-preference :posting-visibility))))
       (setf (qsetting-value (x:cc "acct_" id "/token")) token
             (qsetting-value (x:cc "acct_" id "/streaming-url")) streaming-url
-            (qsetting-value (x:cc "acct_" id "/base-url")) base-url)
+            (qsetting-value (x:cc "acct_" id "/base-url")) base-url
+            (qsetting-value (x:cc "acct_" id "/visibility-default")) default-visibility)
 
       (when set-default-account
         (setf (qsetting-value "default_account") vid)))

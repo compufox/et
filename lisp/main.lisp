@@ -12,7 +12,9 @@
                                          :name "extratootrestrial"
                                          :base (qsetting-value (x:cc "acct_" account "/base-url"))
                                          :website "https://github.com/compufox/et"
-                                         :access-token (qsetting-value (x:cc "acct_" account "/token"))))
+                                         :access-token (qsetting-value (x:cc "acct_" account "/token")))
+          *visibility-default* (parse-integer
+                                (qsetting-value (x:cc "acct_" account "/visibility-default"))))
     
     ;; initialize main window widgets
     (initialize-ui)
