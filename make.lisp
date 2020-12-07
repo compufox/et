@@ -1,16 +1,11 @@
 #-eql5
 (error "Please use the EQL5 executable (see README)")
 
-#-asdf
-(require :asdf)
-
-#-quicklisp
-(require :ecl-quicklisp)
-
 (require :cmp)
 
 (load "dependencies")
 
+;; compiles UI files into lisp files
 (dolist (f (uiop:directory-files "ui/" "*.ui"))
   (let ((name (pathname-name f)))
     (ext:system (x:cc "uic -o ui/" name ".h " (namestring f)))

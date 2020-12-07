@@ -6,3 +6,4 @@
 /ui/*.lisp
 /tr.h
 Makefile
+/ui/*.h

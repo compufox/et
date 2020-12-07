@@ -122,7 +122,6 @@
         (clear-reply)))))
 
 (defun add-new-account (&key should-quit set-default-account)
-  (qrequire :webengine)
   (ui-wizard:ini)
 
   (qoverride ui-wizard:*page-2* "validatePage()" 'validate-instance-url)

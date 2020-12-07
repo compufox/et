@@ -122,8 +122,7 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
 
 (defun validate-instance-url ()
   "validates the instance url entered into the new account wizard"
-  (let ((url (ensure-https (qget ui-wizard:*wiz-serv-entry* "text")))
-        (qurl (qnew "QUrl")))
+  (let ((url (ensure-https (qget ui-wizard:*wiz-serv-entry* "text"))))
     
     ;; ensure we dont get a blank url
     (when (string= "" (qget ui-wizard:*wiz-serv-entry* "text"))
@@ -137,9 +136,7 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
                                                :website "https://github.com/compufox/et"))
           (multiple-value-bind (authed auth-url) (tooter:authorize *tooter-client*)
             (declare (ignore authed))
-            (qfun qurl "setUrl" auth-url)
-            (qfun ui-wizard:*wiz-auth-view* "load" qurl)
-            (qdel qurl)))
+            (qset ui-wizard:*lbl-auth-url* auth-url)))
       (error (e)
         (format t "~A~%" e)))
     t))
