@@ -37,6 +37,7 @@
   (show))
 
 (defun app-close (_)
+  "handle the close event"
   (declare (ignore _))
   (save-application-state)
   (mapcar #'wsd:close-connection *websockets*))

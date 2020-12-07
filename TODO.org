@@ -7,6 +7,7 @@
 ** Add options to redisplay docks that are closed
 
 ** Add preference window
+   what would i put in a preference menu? default account? theme?
 
 ** Add generic error window
 
@@ -27,11 +28,12 @@
 
 ** Custom Emoji??!!??!?
 
-** Fix visibility combobox clipping text
-
 ** Thread view
 
 ** Account view
+
+** Themes?
+   How do?
 
 * Backend
 ** Catch tooter errors, display error

@@ -7,19 +7,18 @@
   (ini)
   (connect-signals)
 
-  (|setVisible| *lyt-reply* nil)
-  (|setVisible| *edt-compose-cw* nil)
+  (qset *lyt-reply* "visible" nil)
+  (qset *edt-compose-cw* "visible" nil)
 
   ;; placeholders set here because of bug in eql5 -quic
   (qset *edt-compose-cw* "placeholderText" "Content Warning...")
   (qset *txt-compose-content* "placeholderText" "Whats up?")
   
   (unless (restore-application-state)
-    (|tabifyDockWidget| *main-window* *dock-notifs* *dock-local*)
-    (|tabifyDockWidget| *main-window* *dock-notifs* *dock-fedi*))
+    (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-local*)
+    (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-fedi*))
   
-  (|raise| *dock-notifs*)
-
+  (qfun *dock-notifs* "raise")
   
   (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
   (setf *max-post-char* (instance-max-chars (tooter:base *tooter-client*)))
@@ -38,8 +37,8 @@
 
 (defun save-application-state ()
   "saves the current application dock state and geometry"
-  (let ((state (qvariant-from-value (|saveState| *main-window*) "QByteArray"))
-        (geom (qvariant-from-value (|saveGeometry| *main-window*) "QByteArray")))
+  (let ((state (qvariant-from-value (qfun *main-window* "saveState") "QByteArray"))
+        (geom (qvariant-from-value (qfun *main-window* "saveGeometry") "QByteArray")))
     (setf (qsetting-value "window/state") state
           (qsetting-value "window/geometry") geom)))
 
@@ -47,8 +46,8 @@
   "restores the application window dock state and geometry"
   (let ((state (qsetting-value "window/state"))
         (geom (qsetting-value "window/geometry")))
-    (when state (|restoreState| *main-window* state))
-    (when geom (|restoreGeometry| *main-window* geom))))
+    (when state (qfun *main-window* "restoreState" state))
+    (when geom (qfun *main-window* "restoreGeometry" geom))))
 
 (defun update-char-count (&optional _)
   "handler to update the character count"
@@ -129,7 +128,7 @@
   (qoverride ui-wizard:*page-2* "validatePage()" 'validate-instance-url)
   (qoverride ui-wizard:*page-3* "validatePage()" 'validate-access-token)
   
-  (when (and (zerop (|exec| ui-wizard:*wiz-new-account*))
+  (when (and (zerop (qfun ui-wizard:*wiz-new-account* "exec"))
              should-quit)
     (eql:qq))
 
