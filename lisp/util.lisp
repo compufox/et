@@ -2,7 +2,7 @@
 
 (declaim (inline streaming-url ensure-https parse-response
                  determine-extension from-utf8 privacy-icon
-                 visibility-to-int))
+                 visibility-to-int ellide listify))
 
 (defun qsetting-value (key &optional default)
   "retrieve a value from qsettings"
@@ -22,13 +22,19 @@
       ,@body)))
 
 (defun initialize-client (account)
-  (setf *tooter-client* (make-instance 'tooter:client
-                                       :name "extratootrestrial"
-                                       :base (qsetting-value (x:cc "acct_" account "/base-url"))
-                                       :website "https://github.com/compufox/et"
-                                       :access-token (qsetting-value (x:cc "acct_" account "/token")))
-        *visibility-default* (parse-integer
-                              (qsetting-value (x:cc "acct_" account "/visibility-default"))))
+  (close-sockets)
+  (let ((visibility (qsetting-value (x:cc "acct_" account "/visibility-default"))))
+    (setf *tooter-client*
+          (make-instance 'tooter:client
+                         :name "extratootrestrial"
+                         :base (qsetting-value (x:cc "acct_" account "/base-url"))
+                         :website "https://github.com/compufox/et"
+                         :access-token (qsetting-value (x:cc "acct_" account "/token")))
+          
+          *visibility-default*
+          (typecase visibility
+            (string (parse-integer visibility))
+            (t visibility))))
   
 
   ;; start our websockets for each standard timeline
@@ -149,37 +155,42 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
   (when (and code reason)
     (format t "disconnected because ~A (code=~A)~%" reason code)))
 
-(defun validate-instance-url ()
-  "validates the instance url entered into the new account wizard"
-  (let ((url (ensure-https (qget ui-wizard:*wiz-serv-entry* "text"))))
-    
-    ;; ensure we dont get a blank url
-    (when (string= "" (qget ui-wizard:*wiz-serv-entry* "text"))
-      (return-from validate-instance-url nil))
-    
-    (handler-case 
+(let (client)
+  (defun validate-instance-url ()
+    "validates the instance url entered into the new account wizard"
+    (let ((url (ensure-https (qget ui-wizard:*wiz-serv-entry* "text"))))
+      
+      ;; ensure we dont get a blank url
+      (when (string= "" (qget ui-wizard:*wiz-serv-entry* "text"))
+        (return-from validate-instance-url nil))
+      
+      (handler-case 
+          (progn
+            (setf client (make-instance 'tooter:client
+                                        :base url
+                                        :name "extratootrestrial"
+                                        :website "https://github.com/compufox/et"))
+            (multiple-value-bind (authed auth-url) (tooter:authorize client)
+              (declare (ignore authed))
+              (qset ui-wizard:*lbl-auth-link* "text"
+                    (format nil "<a href=\"~a\">~a</a>"
+                            auth-url
+                            (ellide auth-url 45)))))
+        (error (e)
+          (format t "~A~%" e)))
+      t))
+  
+  (defun validate-access-token ()
+    "validates the access token entered in the new account wizard"
+    (handler-case
         (progn
-          (setf *tooter-client* (make-instance 'tooter:client
-                                               :base url
-                                               :name "extratootrestrial"
-                                               :website "https://github.com/compufox/et"))
-          (multiple-value-bind (authed auth-url) (tooter:authorize *tooter-client*)
-            (declare (ignore authed))
-            (qset ui-wizard:*lbl-auth-link* auth-url)))
+          (tooter:authorize client
+                            (qget ui-wizard:*wiz-auth-entry* "text"))
+          (tooter:account client)
+          (setf *tooter-client* client))
       (error (e)
-        (format t "~A~%" e)))
+        nil))
     t))
-
-(defun validate-access-token ()
-  "validates the access token entered in the new account wizard"
-  (handler-case
-      (progn
-        (tooter:authorize *tooter-client*
-                          (qget ui-wizard:*wiz-auth-entry* "text"))
-        (tooter:account *tooter-client*))
-    (error (e)
-      nil))
-  t)
 
 (defun from-utf8 (string)
   "run STIRNG through QString.fromUTF8"
@@ -229,3 +240,13 @@ TIMELINE-ARG is used when TIMELINE is a hashtag or list timeline. it should cont
 
 (defun visibility-to-int (visibility)
   (search (list visibility) '(:public :unlisted :private :direct)))
+
+(defun listify (thing)
+  (typecase thing
+    (list thing)
+    (t (list thing))))
+
+(defun ellide (str length)
+  (x:cc (subseq str 0 (min length
+                           (length str)))
+        "..."))

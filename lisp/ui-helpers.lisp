@@ -18,15 +18,7 @@
         :for account :in (typecase accounts
                            (list accounts)
                            (string (list accounts)))
-        :do (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
-                                  *mnu-account*
-                                  :checkable t
-                                  :checked (equal account default)
-                                  :visible t
-                                  :tooltip "change to account"
-                                  :action-group *account-action-group*
-                                  :callback #'(lambda ()
-                                                (change-account-to account))))
+        :do (add-account-option account :set-checked (equal account default)))
   
   ;; by default hide reply layout and CW composer
   ;; TODO: preferences to always show CW composer
@@ -43,10 +35,24 @@
   (setf *max-post-char* (instance-max-chars (tooter:base *tooter-client*)))
   (set-char-count *max-post-char*))
 
+(defun add-account-option (account &key set-checked)
+  (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
+                                  *mnu-account*
+                                  :checkable t
+                                  :checked set-checked
+                                  :visible t
+                                  :tooltip "change to account"
+                                  :action-group *account-action-group*
+                                  :callback
+                                  #'(lambda ()
+                                      (change-account-to account))))
+
 (defun connect-signals ()
   "connect signals and install overrides"
   (qconnect *act-quit* "triggered()" *main-window* "close()")
-  (qconnect *act-new-account* "triggered()" 'add-new-account)
+  (qconnect *act-new-account* "triggered()" #'(lambda ()
+                                                (add-account-option
+                                                 (add-new-account :reinitialize-client t))))
   (qconnect *txt-compose-content* "textChanged()" 'update-char-count)
   (qconnect *edt-compose-cw* "textChanged(QString)" 'update-char-count)
   (qconnect *chk-compose-cw* "toggled(bool)" *edt-compose-cw* "setVisible(bool)")
@@ -103,8 +109,8 @@
     (qset *txt-compose-content* "plainText" (x:cc "@" (tooter:account-name acct)))
 
     ;; maybe set this under a preference option?
-    (when (tooter:spoiler-text to)
-      (qset *chk-compose-cw* "enabled" t)
+    (unless (equal (tooter:spoiler-text to) "")
+      (qset *chk-compose-cw* "checked" t)
       (qset *edt-compose-cw* "visible" t)
       (qset *edt-compose-cw* "text" (tooter:spoiler-text to)))
     
@@ -141,46 +147,48 @@
         (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
         (clear-reply)))))
 
-(defun add-new-account (&key should-quit set-default-account)
+(defun add-new-account (&key should-quit set-default-account reinitialize-client)
   (ui-wizard:ini)
 
   (qoverride ui-wizard:*page-2* "validatePage()" 'validate-instance-url)
   (qoverride ui-wizard:*page-3* "validatePage()" 'validate-access-token)
   
-  (when (and (zerop (qfun ui-wizard:*wiz-new-account* "exec"))
-             should-quit)
-    (eql:qq))
-
-  (let ((id (tooter:id (tooter:account *tooter-client*))))
-    (qlet ((token "QVariant(QString)" (tooter:access-token *tooter-client*))
-           (streaming-url "QVariant(QString)" (streaming-url))
-           (vid "QVariant(QString)" id)
-           (base-url "QVariant(QString)" (tooter:base *tooter-client*))
-           (acct-name "QVariant(QString)" (x:cc "@" (tooter:account-name (tooter:account *tooter-client*))))
-           (default-visibility "QVariant(int)" (visibility-to-int
-                                                (account-preference :posting-visibility)))
-           (acct-list "QVariant(QStringList)" (append (qsetting-value "avaliable-accounts")
-                                                      (list id))))
-      (setf (qsetting-value (x:cc "acct_" id "/token")) token
-            (qsetting-value (x:cc "acct_" id "/streaming-url")) streaming-url
-            (qsetting-value (x:cc "acct_" id "/name")) acct-name
-            (qsetting-value (x:cc "acct_" id "/base-url")) base-url
-            (qsetting-value (x:cc "acct_" id "/visibility-default")) default-visibility
-            (qsetting-value "avaliable-accounts") acct-list)
-
-      (when set-default-account
-        (setf (qsetting-value "default_account") vid)))
-    
-    id))
+  (if (zerop (qfun ui-wizard:*wiz-new-account* "exec"))
+      (when should-quit (eql:qq))
+      
+      (let ((id (tooter:id (tooter:account *tooter-client*)))
+            (accounts (listify (qsetting-value "available-accounts"))))
+        (qlet ((token "QVariant(QString)" (tooter:access-token *tooter-client*))
+               (streaming-url "QVariant(QString)" (streaming-url))
+               (vid "QVariant(QString)" id)
+               (base-url "QVariant(QString)" (tooter:base *tooter-client*))
+               (acct-name "QVariant(QString)" (x:cc "@" (tooter:account-name (tooter:account *tooter-client*))))
+               (default-visibility "QVariant(int)" (visibility-to-int
+                                                    (account-preference :posting-visibility)))
+               (acct-list "QVariant(QStringList)" (append accounts (list id))))
+          (setf (qsetting-value (x:cc "acct_" id "/token")) token
+                (qsetting-value (x:cc "acct_" id "/streaming-url")) streaming-url
+                (qsetting-value (x:cc "acct_" id "/name")) acct-name
+                (qsetting-value (x:cc "acct_" id "/base-url")) base-url
+                (qsetting-value (x:cc "acct_" id "/visibility-default")) default-visibility
+                (qsetting-value "available-accounts") acct-list)
+          
+          (when set-default-account
+            (setf (qsetting-value "default_account") vid)))
+        
+        (when reinitialize-client
+          (clear-timeline *tl-home* *tl-notif* *tl-fedi* *tl-local*)
+          (initialize-client id)
+          (qset *cmb-compose-privacy* "currentIndex" *visibility-default*))
+        
+        id)))
 
 (defun change-account-to (id)
   ;; clears the timelines
-  (dolist (tl (list *tl-home* *tl-notif* *tl-fedi* *tl-local*))
-    (loop until (zerop (qfun tl "count"))
-          do (qdel (qfun tl "takeItem" 0))))
-
   (close-sockets)
-  (initialize-client id))
+  (clear-timeline *tl-home* *tl-notif* *tl-fedi* *tl-local*)
+  (initialize-client id)
+  (qset *cmb-compose-privacy* "currentIndex" *visibility-default*))
 
 (defun update-handler (post timeline)
   (let ((status (generate-status-widget post))
@@ -269,3 +277,8 @@
        (qlet ((p "QPixmap(QString)" icon-path)
               (i "QIcon(QPixmap)" (qfun p "scaled" 16 16 1)))
          (qset btn "icon" i))))))
+
+(defun clear-timeline (&rest timelines)
+  (dolist (tl timelines)
+    (loop until (zerop (qfun tl "count"))
+          do (qdel (qfun tl "takeItem" 0)))))
