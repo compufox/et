@@ -272,7 +272,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="edt_compose_cw"/>
+      <widget class="QLineEdit" name="edt_compose_cw">
+       <property name="placeholderText">
+        <string>Content warning...</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPlainTextEdit" name="txt_compose_content">
@@ -281,6 +285,9 @@
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>Whats up?</string>
        </property>
       </widget>
      </item>

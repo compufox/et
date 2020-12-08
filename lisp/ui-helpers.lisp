@@ -32,10 +32,6 @@
   ;; TODO: preferences to always show CW composer
   (qset *lyt-reply* "visible" nil)
   (qset *edt-compose-cw* "visible" nil)
-
-  ;; placeholders set here because of bug in eql5 -quic
-  (qset *edt-compose-cw* "placeholderText" "Content Warning...")
-  (qset *txt-compose-content* "placeholderText" "Whats up?")
   
   (unless (restore-application-state)
     (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-local*)
