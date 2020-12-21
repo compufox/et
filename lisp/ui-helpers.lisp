@@ -5,6 +5,7 @@
 (defun initialize-ui ()
   "initializes main window before being shown"
   (ini)
+  (preload-timelines)
   (connect-signals)
 
   ;; generate accounts dropdown menu and action group
@@ -32,12 +33,12 @@
 
   (qlet ((post "QPixmap(QString)" "resources/icons/paper-airplane.png")
          (icon "QIcon(QPixmap)" post))
+    (qset *btn-compose-post* "text" "")
     (qfun *btn-compose-post* "setIcon" icon))
   
   (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
   (setf *max-post-char* (instance-max-chars (tooter:base *tooter-client*)))
-  (set-char-count *max-post-char*)
-  (preload-timelines))
+  (set-char-count *max-post-char*))
 
 (defun add-account-option (account &key set-checked)
   (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
@@ -62,7 +63,9 @@
   (qconnect *btn-compose-post* "clicked()" 'send-post)
   (qconnect *btn-reply-clear* "clicked()" 'clear-reply)
   (qconnect *chk-compose-schedule* "clicked(bool)"
-            (l (qset *dte-compose-time* "enabled" _)))
+            (l (qset *dte-compose-time* "enabled" _)
+               (when _ (qset *dte-compose-time* "dateTime"
+                             (qfun "QDateTime" "currentDateTime")))))
   (qoverride *main-window* "closeEvent(QCloseEvent*)" 'app-close))
 
 (defun save-application-state ()
@@ -135,13 +138,16 @@
     (let ((content (qget *txt-compose-content* "plainText"))
           (visibility (to-keyword (qget *cmb-compose-privacy* "currentText")))
           (hide-media (qget *chk-compose-hide* "checked"))
-          (cw (qget *edt-compose-cw* "text")))
+          (cw (qget *edt-compose-cw* "text"))
+          (time (when (qget *chk-compose-schedule* "checked")
+                  (qfun (qfun (qget *dte-compose-time* "dateTime") "toUTC") "toString" 1))))
       (async 
         ;; need to catch for errors here
         (tooter:make-status *tooter-client*
                             content
                             :visibility visibility
                             :sensitive hide-media
+                            :scheduled-at time
                             :spoiler-text (when (qget *chk-compose-cw* "checked") cw)
                             :in-reply-to *reply-id*)
         
@@ -153,6 +159,8 @@
          (qset *chk-compose-hide* "checked" nil)
          (qset *btn-compose-post* "enabled" t)
          (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
+         (qset *chk-compose-schedule* "checked" nil)
+         (qset *dte-compose-time* "enabled" nil)
          (clear-reply))))))
   
 (defun add-new-account (&key should-quit set-default-account reinitialize-client)
@@ -199,24 +207,25 @@
   (qset *cmb-compose-privacy* "currentIndex" *visibility-default*))
 
 (defun update-handler (post timeline)
-  (let ((status (generate-status-widget post))
-        (item (qnew "QListWidgetItem"))
-        (tl (case timeline
-              (:home *tl-home*)
-              (:local *tl-local*)
-              (:fedi *tl-fedi*)))
-        (status-name (x:cc "status_"
-                           (princ-to-string (tooter:id post)))))
-    (flet ((set-size ()
-             (list (qfun tl "frameWidth")
-                   (cadr (qfun status "sizeHint")))))
-      (qfun status "show")
-      (qfun item "setSizeHint" (set-size))
-      ;(qoverride item "data(int)"
-      ;           (l (qvariant-from-value status-name "QString")))
-      (qconnect (qfind-child status "btn_cw") "clicked()" #'set-size)
-      (qfun tl "insertItem" 0 item)
-      (qfun tl "setItemWidget" item status))))
+  (qlet ((item "QListWidgetItem"))
+    (let ((status (generate-status-widget post))
+          (tl (case timeline
+                (:home *tl-home*)
+                (:local *tl-local*)
+                (:fedi *tl-fedi*)))
+          (status-name (x:cc "status_"
+                             (princ-to-string (tooter:id post)))))
+        (flet ((set-size ()
+                 (qfun item "setSizeHint"
+                       (list (qfun tl "frameWidth")
+                             (cadr (qfun status "sizeHint"))))))
+          (qfun status "show")
+          (set-size)
+        ;(qoverride item "data(int)"
+        ;           (l (qvariant-from-value status-name "QString")))
+          (qconnect (qfind-child status "btn_cw") "clicked()" #'set-size)
+          (qfun tl "insertItem" 0 item)
+          (qfun tl "setItemWidget" item status)))))
 
 (defun delete-handler (id timeline)
   (let* ((tl (case timeline
@@ -227,12 +236,12 @@
     
     ;; iterate over model to find widget with objectName matching ID
     ;; then remove it
-    (loop for i upto count
-          for item = (qfun tl "item" i)
+    (loop :for i :upto count
+          :for item := (qfun tl "item" i)
 
-          when (equal (qvariant-value (qfun item "data" 0))
+          :when (equal (qvariant-value (qfun item "data" 0))
                       (x:cc "status_" (princ-to-string id)))
-            do (qfun tl "removeItemWidget" item))))
+            :do (qrun* (qfun tl "removeItemWidget" item)))))
 
 (defun notification-handler (post)
   (declare (ignore post))
@@ -294,9 +303,9 @@
 
 (defun preload-timelines ()
   (async*
-   (loop :for status :in (reverse (tooter:timeline *tooter-client* :home))
+   (loop :for status :in (reverse (tooter:timeline *tooter-client* :home :limit 20))
          :do (qrun* (update-handler status :home)))
-   (loop :for status :in (reverse (tooter:timeline *tooter-client* :public :local t))
+   (loop :for status :in (reverse (tooter:timeline *tooter-client* :public :local t :limit 20))
          :do (qrun* (update-handler status :local)))
-   (loop :for status :in (reverse (tooter:timeline *tooter-client* :public))
+   (loop :for status :in (reverse (tooter:timeline *tooter-client* :public :limit 20))
          :do (qrun* (update-handler status :fedi)))))

@@ -223,6 +223,9 @@
         </property>
         <item>
          <widget class="QPushButton" name="btn_reply_clear">
+          <property name="toolTip">
+           <string>Clear Reply</string>
+          </property>
           <property name="text">
            <string>Clear</string>
           </property>
@@ -329,6 +332,9 @@
          </item>
          <item row="0" column="1" rowspan="2">
           <widget class="QCheckBox" name="chk_compose_schedule">
+           <property name="toolTip">
+            <string>Schedule status for later</string>
+           </property>
            <property name="text">
             <string>Schedule</string>
            </property>
@@ -338,6 +344,9 @@
           <widget class="QPushButton" name="btn_compose_post">
            <property name="enabled">
             <bool>false</bool>
+           </property>
+           <property name="toolTip">
+            <string>Post Status</string>
            </property>
            <property name="text">
             <string>Post</string>
@@ -394,6 +403,9 @@
           <widget class="QDateTimeEdit" name="dte_compose_time">
            <property name="enabled">
             <bool>false</bool>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
            </property>
           </widget>
          </item>

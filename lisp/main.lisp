@@ -25,6 +25,7 @@
   (declare (ignore _))
   (save-application-state)
   (qdel *account-action-group*)
+  (clear-all-timelines)
   (close-sockets))
 
 (defun dispatch (message timeline &optional handle-notifications)
