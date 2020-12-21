@@ -16,10 +16,25 @@
     (|setValue| settings key value)))
 
 (defmacro async (&body body)
-  "runs BODY in a different thread"
+  "runs BODY in a different thread.
+
+thread function optionally accepts 2 parameters: _ and __"
   `(bt:make-thread
-    (lambda ()
-      ,@body)))
+    (l ,@body)))
+
+(defmacro async* (&rest forms)
+  "run each form in FORMS in a separate thread"
+  `(progn
+     ,@(loop :for form :in forms
+             :collect `(async ,form))))
+
+(defmacro l (&body body)
+  "returns a lambda around BODY.
+
+lambda optionally accepts 2 parameters: _ and __"
+  `(lambda (&optional _ __)
+     (declare (ignorable _ __))
+     ,@body))
 
 (defun initialize-client (account)
   (close-sockets)
@@ -39,17 +54,11 @@
 
   ;; start our websockets for each standard timeline
   (start-websocket account "user"
-                   #'(lambda (m)
-                       (qrun*
-                         (dispatch m "home" t))))
+                   (l (dispatch _ :home t)))
   (start-websocket account "public:local"
-                   #'(lambda (m)
-                       (qrun*
-                         (dispatch m "local"))))
+                   (l (dispatch _ :local)))
   (start-websocket account "public"
-                   #'(lambda (m)
-                       (qrun* 
-                         (dispatch m "fedi")))))
+                   (l (dispatch _ :fedi))))
 
 (defun close-sockets ()
   (mapcar #'wsd:close-connection *websockets*)

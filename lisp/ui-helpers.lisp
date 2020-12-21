@@ -1,6 +1,6 @@
 (in-package :et)
 
-(declaim (inline set-char-count initialize-ui))
+(declaim (inline set-char-count))
 
 (defun initialize-ui ()
   "initializes main window before being shown"
@@ -27,13 +27,13 @@
   
   (unless (restore-application-state)
     (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-local*)
-    (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-fedi*))
-  
-  (qfun *dock-notifs* "raise")
+    (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-fedi*)
+    (qfun *dock-notifs* "raise"))
   
   (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
   (setf *max-post-char* (instance-max-chars (tooter:base *tooter-client*)))
-  (set-char-count *max-post-char*))
+  (set-char-count *max-post-char*)
+  (preload-timelines))
 
 (defun add-account-option (account &key set-checked)
   (generate-menu-action (qsetting-value (x:cc "acct_" account "/name"))
@@ -108,6 +108,9 @@
     (qset *lbl-reply-content* "text" (tooter:content to))
     (qset *txt-compose-content* "plainText" (x:cc "@" (tooter:account-name acct)))
 
+    (qset *cmb-compose-privacy* "currentIndex"
+          (visibility-to-int (tooter:visibility to)))
+    
     ;; maybe set this under a preference option?
     (unless (equal (tooter:spoiler-text to) "")
       (qset *chk-compose-cw* "checked" t)
@@ -193,10 +196,10 @@
 (defun update-handler (post timeline)
   (let ((status (generate-status-widget post))
         (item (qnew "QListWidgetItem"))
-        (tl (cond
-              ((string= timeline "home") *tl-home*)
-              ((string= timeline "local") *tl-local*)
-              ((string= timeline "fedi") *tl-fedi*)))
+        (tl (case timeline
+              (:home *tl-home*)
+              (:local *tl-local*)
+              (:fedi *tl-fedi*)))
         (status-name (x:cc "status_"
                            (princ-to-string (tooter:id post)))))
     (flet ((set-size ()
@@ -213,10 +216,10 @@
       (qfun tl "setItemWidget" item status))))
 
 (defun delete-handler (id timeline)
-  (let* ((tl (cond
-              ((string= timeline "home") *tl-home*)
-              ((string= timeline "local") *tl-local*)
-              ((string= timeline "fedi") *tl-fedi*)))
+  (let* ((tl (case timeline
+              (:home *tl-home*)
+              (:local *tl-local*)
+              (:fedi *tl-fedi*)))
          (count (qget tl "count")))
     
     ;; iterate over model to find widget with objectName matching ID
@@ -278,7 +281,19 @@
               (i "QIcon(QPixmap)" (qfun p "scaled" 16 16 1)))
          (qset btn "icon" i))))))
 
+(defun clear-all-timelines ()
+  (clear-timeline *tl-home* *tl-local* *tl-fedi* *tl-notif*))
+
 (defun clear-timeline (&rest timelines)
   (dolist (tl timelines)
     (loop until (zerop (qfun tl "count"))
           do (qdel (qfun tl "takeItem" 0)))))
+
+(defun preload-timelines ()
+  (async*
+   (loop :for status :in (reverse (tooter:timeline *tooter-client* :home))
+         :do (qrun* (update-handler status :home)))
+   (loop :for status :in (reverse (tooter:timeline *tooter-client* :public :local t))
+         :do (qrun* (update-handler status :local)))
+   (loop :for status :in (reverse (tooter:timeline *tooter-client* :public))
+         :do (qrun* (update-handler status :fedi)))))

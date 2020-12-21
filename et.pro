@@ -1,4 +1,4 @@
-QT          += widgets printsupport uitools
+QT          += widgets printsupport uitools multimedia
 TEMPLATE    = app
 CONFIG      += no_keywords release
 INCLUDEPATH += /usr/local/include

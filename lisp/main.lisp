@@ -1,10 +1,12 @@
 (in-package :et)
 
+(qrequire :multimedia)
+
 (defun start ()
   ;; set some QSettings defaults
-  (|setOrganizationName.QCoreApplication| "GeckerInc")
-  (|setOrganizationDomain.QCoreApplication| "computerfox.xyz")
-  (|setApplicationName.QCoreApplication| "ET")
+  (qfun "QCoreApplication" "setOrganizationName" "GeckerInc")
+  (qfun "QCoreApplication" "setOrganizationDomain" "computerfox.xyz")
+  (qfun "QCoreApplication" "setApplicationName" "ET")
 
   (let ((account (or (qsetting-value "default_account")
                      (add-new-account :should-quit t :set-default-account t))))
@@ -31,14 +33,17 @@
 
     (cond
       ((string= (gethash "event" parsed) "update")
-       (update-handler (tooter:find-status *tooter-client* (gethash "id" payload)) timeline))
+       (qrun* 
+        (update-handler (tooter:find-status *tooter-client* (gethash "id" payload)) timeline)))
 
       ((string= (gethash "event" parsed) "delete")
-       (delete-handler payload timeline))
+       (qrun*
+        (delete-handler payload timeline)))
 
       ((and (string= (gethash "event" parsed) "notification")
             handle-notifications)
-       (notification-handler (tooter:find-notification *tooter-client* (gethash "id" payload))))
+       (qrun* 
+        (notification-handler (tooter:find-notification *tooter-client* (gethash "id" payload)))))
 
       (t nil))))
 

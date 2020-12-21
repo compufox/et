@@ -1,14 +1,15 @@
 (defsystem :et
-  :serial t
   :depends-on (:tooter :yason :websocket-driver-client
                :bordeaux-threads)
-  :components ((:module "ui" :serial t
+  :components ((:module "ui"
                 :components ((:file "main")
                              (:file "wizard")
                              (:file "status")))
-               (:file "package")
-               (:module "lisp" :serial t
-                :components ((:file "vars")
+               (:module "lisp"
+                :serial t
+                :depends-on ("ui")
+                :components ((:file "package")
+                             (:file "vars")
                              (:file "util")
                              (:file "ui-helpers")
                              (:file "ui-factory")
