@@ -2,8 +2,6 @@
 ** Fix statuses overlapping when expanding CW
    maybe its the size policy? 
 
-** Add menu options for adding/switching accounts
-
 ** Add options to redisplay docks that are closed
 
 ** Add preference window
@@ -35,10 +33,10 @@
 ** Themes?
    How do?
 
+** Drafts dock widget
+
 * Backend
 ** Catch tooter errors, display error
-
-** Fetch ~20-40 statuses to fill timelines on start up
 
 ** Fix delete handler
    this is complicated? need to figure out how to retrieve status id from QListWidgetItem
