@@ -29,6 +29,10 @@
     (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-local*)
     (qfun *main-window* "tabifyDockWidget" *dock-notifs* *dock-fedi*)
     (qfun *dock-notifs* "raise"))
+
+  (qlet ((post "QPixmap(QString)" "resources/icons/paper-airplane.png")
+         (icon "QIcon(QPixmap)" post))
+    (qfun *btn-compose-post* "setIcon" icon))
   
   (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
   (setf *max-post-char* (instance-max-chars (tooter:base *tooter-client*)))
@@ -44,21 +48,21 @@
                                   :tooltip "change to account"
                                   :action-group *account-action-group*
                                   :callback
-                                  #'(lambda ()
-                                      (change-account-to account))))
+                                  (l (change-account-to account))))
 
 (defun connect-signals ()
   "connect signals and install overrides"
   (qconnect *act-quit* "triggered()" *main-window* "close()")
-  (qconnect *act-new-account* "triggered()" #'(lambda ()
-                                                (add-account-option
-                                                 (add-new-account :reinitialize-client t))))
+  (qconnect *act-new-account* "triggered()"
+            (l (add-account-option (add-new-account :reinitialize-client t))))
   (qconnect *txt-compose-content* "textChanged()" 'update-char-count)
   (qconnect *edt-compose-cw* "textChanged(QString)" 'update-char-count)
   (qconnect *chk-compose-cw* "toggled(bool)" *edt-compose-cw* "setVisible(bool)")
   (qconnect *chk-compose-cw* "toggled(bool)" 'update-char-count)
   (qconnect *btn-compose-post* "clicked()" 'send-post)
   (qconnect *btn-reply-clear* "clicked()" 'clear-reply)
+  (qconnect *chk-compose-schedule* "clicked(bool)"
+            (l (qset *dte-compose-time* "enabled" _)))
   (qoverride *main-window* "closeEvent(QCloseEvent*)" 'app-close))
 
 (defun save-application-state ()
@@ -88,11 +92,9 @@
     (set-char-count count)
 
     ;; enable/disable post button
-    (if (< count 0)
-        (qset *btn-compose-post* "enabled" nil)
-        (when (and (>= count 0)
-                 (not (qget *btn-compose-post* "enabled")))
-            (qset *btn-compose-post* "enabled" t)))))
+    (if (and (> count 0) (not (zerop (length status-text))))
+        (qset *btn-compose-post* "enabled" t)
+        (qset *btn-compose-post* "enabled" nil))))
 
 (defun set-char-count (text)
   "set the character count to TEXT"
@@ -106,7 +108,8 @@
     (qlet ((p "QPixmap(QString)" (namestring (account-avatar-path acct))))
       (qset *lbl-reply-avatar* "pixmap" (qfun p "scaled" 30 30 1)))
     (qset *lbl-reply-content* "text" (tooter:content to))
-    (qset *txt-compose-content* "plainText" (x:cc "@" (tooter:account-name acct)))
+    (qset *txt-compose-content* "plainText" (x:cc "@" (tooter:account-name acct)
+                                                  " "))
 
     (qset *cmb-compose-privacy* "currentIndex"
           (visibility-to-int (tooter:visibility to)))
@@ -122,34 +125,36 @@
 (defun clear-reply ()
   "clears the reply ID and hides the reply layout"
   (setf *reply-id* nil)
-  (qset *lyt-reply* "visible" nil))
+  (qset *lyt-reply* "visible" nil)
+  (qset *txt-compose-content* "plainText" ""))
 
 (defun send-post ()
   ;; disable our post button until we send the status
-  (qset *btn-compose-post* "enabled" nil)
-  (let ((content (qget *txt-compose-content* "plainText"))
-        (visibility (to-keyword (qget *cmb-compose-privacy* "currentText")))
-        (hide-media (qget *chk-compose-hide* "checked"))
-        (cw (qget *edt-compose-cw* "text")))
-    (async 
-      ;; need to catch for errors here
-      (tooter:make-status *tooter-client*
-                          content
-                          :visibility visibility
-                          :sensitive hide-media
-                          :spoiler-text (when (qget *chk-compose-cw* "checked") cw)
-                          :in-reply-to *reply-id*)
-      
-      ;; set stuff back to defaults
-      (qrun*
-        (qset *txt-compose-content* "plainText" "")
-        (qset *edt-compose-cw* "text" "")
-        (qset *chk-compose-cw* "checked" nil)
-        (qset *chk-compose-hide* "checked" nil)
-        (qset *btn-compose-post* "enabled" t)
-        (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
-        (clear-reply)))))
-
+  (unless (zerop (length (qget *txt-compose-content* "plainText")))
+    (qset *btn-compose-post* "enabled" nil)
+    (let ((content (qget *txt-compose-content* "plainText"))
+          (visibility (to-keyword (qget *cmb-compose-privacy* "currentText")))
+          (hide-media (qget *chk-compose-hide* "checked"))
+          (cw (qget *edt-compose-cw* "text")))
+      (async 
+        ;; need to catch for errors here
+        (tooter:make-status *tooter-client*
+                            content
+                            :visibility visibility
+                            :sensitive hide-media
+                            :spoiler-text (when (qget *chk-compose-cw* "checked") cw)
+                            :in-reply-to *reply-id*)
+        
+        ;; set stuff back to defaults
+        (qrun*
+         (qset *txt-compose-content* "plainText" "")
+         (qset *edt-compose-cw* "text" "")
+         (qset *chk-compose-cw* "checked" nil)
+         (qset *chk-compose-hide* "checked" nil)
+         (qset *btn-compose-post* "enabled" t)
+         (qset *cmb-compose-privacy* "currentIndex" *visibility-default*)
+         (clear-reply))))))
+  
 (defun add-new-account (&key should-quit set-default-account reinitialize-client)
   (ui-wizard:ini)
 
@@ -208,9 +213,7 @@
       (qfun status "show")
       (qfun item "setSizeHint" (set-size))
       ;(qoverride item "data(int)"
-      ;           #'(lambda (_)
-      ;               (declare (ignore _))
-      ;               (qvariant-from-value status-name "QString")))
+      ;           (l (qvariant-from-value status-name "QString")))
       (qconnect (qfind-child status "btn_cw") "clicked()" #'set-size)
       (qfun tl "insertItem" 0 item)
       (qfun tl "setItemWidget" item status))))

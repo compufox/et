@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>786</width>
-    <height>770</height>
+    <width>895</width>
+    <height>816</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -74,7 +74,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>786</width>
+     <width>895</width>
      <height>30</height>
     </rect>
    </property>
@@ -211,6 +211,12 @@
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <widget class="QWidget" name="lyt_reply" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <property name="sizeConstraint">
          <enum>QLayout::SetDefaultConstraint</enum>
@@ -281,7 +287,7 @@
      <item>
       <widget class="QPlainTextEdit" name="txt_compose_content">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
@@ -294,74 +300,104 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <property name="sizeConstraint">
-        <enum>QLayout::SetMinimumSize</enum>
+        <enum>QLayout::SetMaximumSize</enum>
        </property>
        <item>
         <widget class="QLabel" name="lbl_compose_count">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>500</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="chk_compose_cw">
-         <property name="text">
-          <string>CW</string>
+        <layout class="QGridLayout" name="gridLayout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetFixedSize</enum>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="chk_compose_hide">
-         <property name="text">
-          <string>Hide</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="cmb_compose_privacy">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <property name="maxVisibleItems">
-          <number>4</number>
-         </property>
-         <property name="sizeAdjustPolicy">
-          <enum>QComboBox::AdjustToContents</enum>
-         </property>
-         <item>
-          <property name="text">
-           <string>Public</string>
-          </property>
+         <item row="0" column="0" rowspan="2">
+          <widget class="QCheckBox" name="chk_compose_cw">
+           <property name="text">
+            <string>CW</string>
+           </property>
+          </widget>
          </item>
-         <item>
-          <property name="text">
-           <string>Unlisted</string>
-          </property>
+         <item row="0" column="1" rowspan="2">
+          <widget class="QCheckBox" name="chk_compose_schedule">
+           <property name="text">
+            <string>Schedule</string>
+           </property>
+          </widget>
          </item>
-         <item>
-          <property name="text">
-           <string>Private</string>
-          </property>
+         <item row="0" column="2">
+          <widget class="QPushButton" name="btn_compose_post">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Post</string>
+           </property>
+          </widget>
          </item>
-         <item>
-          <property name="text">
-           <string>Direct</string>
-          </property>
+         <item row="1" column="2" rowspan="2">
+          <widget class="QComboBox" name="cmb_compose_privacy">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="currentIndex">
+            <number>0</number>
+           </property>
+           <property name="maxVisibleItems">
+            <number>4</number>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QComboBox::AdjustToContents</enum>
+           </property>
+           <item>
+            <property name="text">
+             <string>Public</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Unlisted</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Private</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Direct</string>
+            </property>
+           </item>
+          </widget>
          </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btn_compose_post">
-         <property name="text">
-          <string>Post</string>
-         </property>
-        </widget>
+         <item row="2" column="0">
+          <widget class="QCheckBox" name="chk_compose_hide">
+           <property name="text">
+            <string>Hide</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QDateTimeEdit" name="dte_compose_time">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
@@ -502,8 +538,8 @@
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>475</x>
-     <y>449</y>
+     <x>553</x>
+     <y>458</y>
     </hint>
     <hint type="destinationlabel">
      <x>517</x>

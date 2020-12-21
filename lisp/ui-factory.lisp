@@ -75,9 +75,8 @@
               (qset lbl-cw "text" (from-utf8 spoiler-text))
               (qfun lbl-content "setVisible" nil)
               (qconnect btn-cw "clicked()"
-                        #'(lambda ()
-                            (qset lbl-content "visible"
-                                  (not (qget lbl-content "visible"))))))
+                        (l (qset lbl-content "visible"
+                                 (not (qget lbl-content "visible"))))))
             (qset lyt-cw "visible" nil)))
       
       
@@ -109,14 +108,11 @@
     
     ;; set button signals here
     (qconnect ui-status:*btn-reply* "clicked()"
-              #'(lambda ()
-                  (prepare-reply from)))
+              (l (prepare-reply from)))
     (qconnect ui-status:*btn-fave* "clicked()"
-              #'(lambda ()
-                  (favourite-status from status)))
+              (l (favourite-status from status)))
     (qconnect ui-status:*btn-boost* "clicked()"
-              #'(lambda ()
-                  (reblog-status from status)))
+              (l (reblog-status from status)))
     
     ;; connect btn-more actions here
     
